@@ -1,5 +1,5 @@
 @startuml 
-title Диаграмма контекста
+title Диаграмма контейнеров
 !include ./uml-lib/C4_Container.puml 
 ' Пользователи
 Person(user, "Клиент", "Клиент банка")

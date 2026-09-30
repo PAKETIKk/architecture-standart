@@ -1,0 +1,23 @@
+@startuml 
+title Диаграмма контекста
+!include ./uml-lib/C4_Context.puml 
+' Пользователи
+Person(user, "Клиент", "Клиент банка")
+Person(operator, "Оператор кол-центра")
+Person(partnerOperator, "Оператор партнерского кол-центра")
+' Системы
+System(ABS, "АБС", "Автоматическая банковская система")
+System(callCenter, "Система кол-центра", "Система внутреннего кол-центра банка")
+System(partnerCallCenter, "Система партнерского кол-центра", "Система партнерского кол-центра")
+' Взаимодействия
+user ..> operator: "Обращается"
+user ..> partnerOperator: "Обращается"
+
+operator ..> callCenter: "Заводит обращения, просматривает ставки"
+callCenter ..> ABS: "Передает информацию по обращениям, запрашивает актуальные ставки раз в час"
+
+partnerOperator ..> partnerCallCenter: "Заводит обращения, просматривает ставки"
+partnerCallCenter ..> ABS: "Передает информацию по обращениям"
+
+ABS .up.> partnerCallCenter: "Передает XLS-файлы актуальных ставок раз в час"
+@enduml
