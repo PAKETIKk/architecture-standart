@@ -1,0 +1,41 @@
+@startuml 
+title Диаграмма контейнеров
+!include ./uml-lib/C4_Container.puml 
+' Пользователи
+Person(user, "Клиент", "Клиент банка")
+Person(operator, "Оператор кол-центра")
+Person(partnerOperator, "Оператор партнерского кол-центра")
+' Системы
+Container_Boundary(ABS, "АБС"){
+    ' Сервисы
+    Container(absService, "Service ABS", "", "Реализует внутреннюю логику")
+    ContainerDb(absDb, "База данных АБС", "Oracle Database / PL-SQL", "Хранит данные и выполняет основную бизнес-логику в процедурах PL/SQL")
+    ' Связи
+    absService ..> absDb: "Вызывает процедуры и читает/записывает данные"
+}
+Container_Boundary(callCenter, "Система кол-центра"){
+    ' Сервисы
+    Container(callCenterService, "СallCenter Service", "", "Реализует внутреннюю логику")
+    ContainerDb(callCenterDb, "СallCenter Service Database", "", "Хранит данные")
+    ' Связи
+    callCenterService ..> callCenterDb: "Читает/записывает данные"
+}
+Container_Boundary(partnerCallCenter, "Система партнерского кол-центра"){
+    ' Сервисы
+    Container(partnerCallCenterService, "PartnerCallCenter Service", "", "Реализует внутреннюю логику")
+    ContainerDb(partnerCallCenterDb, "PartnerCallCenter Service Database", "", "Хранит данные")
+    ' Связи
+    partnerCallCenterService ..> partnerCallCenterDb: "Читает/записывает данные"
+}
+' Взаимодействия
+user ..> operator: "Обращается"
+user ..> partnerOperator: "Обращается"
+
+operator ..> callCenterService: "Заводит обращения, просматривает ставки"
+callCenterService ..> absService: "Передает информацию по обращениям, запрашивает актуальные ставки раз в час"
+
+partnerOperator ..> partnerCallCenterService: "Заводит обращения, просматривает ставки"
+partnerCallCenterService ..> absService: "Передает информацию по обращениям"
+
+absService .up.> partnerCallCenterService: "Передает XLS-файлы актуальных ставок раз в час по SFTP"
+@enduml

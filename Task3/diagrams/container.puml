@@ -1,0 +1,71 @@
+@startuml 
+title Диаграмма контейнеров
+!include ./uml-lib/C4_Container.puml 
+' Пользователи
+Person(user, "Клиент", "Клиент банка")
+Person(backManager, "Менеджер бэк-офиса")
+Person(frontManager, "Менеджер фронт-офиса")
+Person(operator, "Оператор кол-центра")
+Person(partnerOperator, "Оператор партнерского кол-центра")
+' Системы
+Container_Boundary(ABS, "АБС"){
+    ' Сервисы
+    Container(absClient, "Десктопный клиент АБС", "Delphi", "Интерфейс для сотрудников банка")
+    Container(absService, "Service ABS", "", "Реализует внутреннюю логику")
+    ContainerDb(absDb, "База данных АБС", "Oracle Database / PL-SQL", "Хранит данные и выполняет основную бизнес-логику в процедурах PL/SQL")
+    ' Связи
+    absClient ..> absService: "Вызывает процедуры и читает/записывает данные"
+    absService ..> absDb: "Вызывает процедуры и читает/записывает данные"
+}
+Container_Boundary(ebank, "Интернет-банк"){
+    ' Сервисы
+    Container(monolith, "Монолит", "ASP.NET MVC 4.5", "Моноитная часть системы")
+    ContainerDb(ebankBD, "eBank\nDatabase", "MS SQL", "Хранит данные\nинтернет-банка")
+
+    ContainerDb(cache, "Кэш данных", "Redis", "Временно хранит данные, полученные из АБС, например актуальные ставки")
+
+    Container(depositeService, "Deposite Service", "MS SQL", "Управлет депозитами")
+    ContainerDb(depositeServiceDB, "Deposite Service Database", "MS SQL", "Хранит данные\nDeposite Service")
+    ' Связи
+    monolith .right.> ebankBD: "Читает\nи\nзаписывает\nданные"
+    monolith .right.> cache: "Читает\nкэш"
+
+    depositeService .right.> depositeServiceDB: "Читает\nи\nзаписывает\nданные"
+    depositeService .right.> cache: "Читает\nи\nизменяет\nкэш"
+
+    monolith <.down.> depositeService: Взаимодействует
+    ' Подсказка для рендера
+    ebankBD -[hidden]down- cache
+    cache -[hidden]down- depositeServiceDB
+}
+System(site, "Сайт", "Сайт банка")
+System(callCenter, "Система кол-центра", "Система внутреннего кол-центра банка")
+System(partnerCallCenter, "Система партнерского кол-центра", "Система партнерского кол-центра")
+System(SMSGateway, "СМС-шлюз телеком-оператора", "Направляет СМС уведомления пользователям")
+' Взаимодействия
+user .right.> site: "Использует"
+site ..> absService: "Запрашивает актуальные ставки, передает заявки на создание депозитов"
+absService ..> site: "Передает маркетинговую информацию"
+
+site ..> monolith: "Перенаправляет клиента для авторизации"
+
+user .down.> monolith: "Использует"
+monolith ..> absService: "Передает информацию по платежам"
+depositeService .down.> absService: "Запрашивает актуальные ставки, передает информацию по заявкам на депозиты"
+absService ..> depositeService: "Передает информацию по депозитным счетам, подтверждает аккаунты пользователей"
+
+absService ..> monolith: "Передает маркетинговую информацию, информацию по кредитным счетам, подтверждает аккаунты пользователей"
+
+backManager ..> absClient: "Управляет кредитными и дебетовыми процессами"
+frontManager ..> absClient: "Работает с обращениями клиентов офиса"
+
+absService <.. callCenter: "Передает информацию по обращениям"
+callCenter <.. operator: "Заводит обращения"
+partnerCallCenter <.. partnerOperator: "Заводит обращения"
+absService <.. partnerCallCenter: "Передает информацию по обращениям"
+
+monolith ..> SMSGateway: "Отправляет коды подтверждения"
+absService ..> SMSGateway: "Отправляет уведомления"
+' Подсказка для рендера
+monolith -[hidden]left- site
+@enduml
