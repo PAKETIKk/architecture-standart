@@ -9,6 +9,7 @@ Person(partnerOperator, "Оператор партнерского кол-цен
 System(ABS, "АБС", "Автоматическая банковская система")
 System(callCenter, "Система кол-центра", "Система внутреннего кол-центра банка")
 System(partnerCallCenter, "Система партнерского кол-центра", "Система партнерского кол-центра")
+System(fileExchange, "Система файлового обмена банка", "Получает ставки из АБС и доставляет XLS-файлы партнёру")
 ' Взаимодействия
 user ..> operator: "Обращается"
 user ..> partnerOperator: "Обращается"
@@ -19,5 +20,6 @@ callCenter ..> ABS: "Передает информацию по обращени
 partnerOperator ..> partnerCallCenter: "Заводит обращения, просматривает ставки"
 partnerCallCenter ..> ABS: "Передает информацию по обращениям"
 
-ABS .up.> partnerCallCenter: "Передает XLS-файлы актуальных ставок раз в час"
+fileExchange .left.> ABS: "Запрашивает актуальные ставки раз в час по HTTPS"
+fileExchange .up.> partnerCallCenter: "Доставляет XLS-файлы по SFTP"
 @enduml

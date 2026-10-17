@@ -24,8 +24,13 @@ Container_Boundary(ebank, "Интернет-банк"){
 
     ContainerDb(cache, "Кэш данных", "Redis", "Временно хранит данные, полученные из АБС, например актуальные ставки")
 
-    Container(depositeService, "Deposite Service", "MS SQL", "Управлет депозитами")
+    Container(depositeService, "Deposite Service", "ASP.NET MVC 4.5", "Управлет депозитами")
     ContainerDb(depositeServiceDB, "Deposite Service Database", "MS SQL", "Хранит данные\nDeposite Service")
+
+    Container(absAdapter, "Адаптер АБС", "ASP.NET MVC 4.5", "Передает запросы в АБС с ограниченной частотой")
+
+    ContainerQueue(broker, "Брокер сообщений", "Kafka", "Хранит сообщения о заявках и ставках")
+
     ' Связи
     monolith .right.> ebankBD: "Читает\nи\nзаписывает\nданные"
     monolith .right.> cache: "Читает\nкэш"
@@ -33,7 +38,10 @@ Container_Boundary(ebank, "Интернет-банк"){
     depositeService .right.> depositeServiceDB: "Читает\nи\nзаписывает\nданные"
     depositeService .right.> cache: "Читает\nи\nизменяет\nкэш"
 
-    monolith <.down.> depositeService: Взаимодействует
+    depositeService .left.> broker: "Читает\nи\nпубликует\nсообщения"
+    absAdapter .right.> broker: "Читает\nи\nпубликует\nсообщения"
+
+    monolith <.down.> depositeService: Взаимодействие по депозитам
     ' Подсказка для рендера
     ebankBD -[hidden]down- cache
     cache -[hidden]down- depositeServiceDB
@@ -51,8 +59,8 @@ site ..> monolith: "Перенаправляет клиента для авто�
 
 user .down.> monolith: "Использует"
 monolith ..> absService: "Передает информацию по платежам"
-depositeService .down.> absService: "Запрашивает актуальные ставки, передает информацию по заявкам на депозиты"
-absService ..> depositeService: "Передает информацию по депозитным счетам, подтверждает аккаунты пользователей"
+absAdapter .down.> absService: "Запрашивает актуальные ставки, передает информацию по заявкам на депозиты"
+absService ..> absAdapter: "Передает информацию по депозитным счетам, подтверждает аккаунты пользователей"
 
 absService ..> monolith: "Передает маркетинговую информацию, информацию по кредитным счетам, подтверждает аккаунты пользователей"
 

@@ -6,27 +6,42 @@ Person(user, "Клиент", "Клиент банка")
 Person(operator, "Оператор кол-центра")
 Person(partnerOperator, "Оператор партнерского кол-центра")
 ' Системы
-Container_Boundary(ABS, "АБС"){
-    ' Сервисы
-    Container(absService, "Service ABS", "", "Реализует внутреннюю логику")
-    ContainerDb(absDb, "База данных АБС", "Oracle Database / PL-SQL", "Хранит данные и выполняет основную бизнес-логику в процедурах PL/SQL")
-    ' Связи
-    absService ..> absDb: "Вызывает процедуры и читает/записывает данные"
+Container_Boundary(fileExchange, "Система файлового обмена банка"){
+    Container(exportAdapter, "Адаптер выгрузки", "ASP.NET MVC 4.5", "Раз в час получает ставки из АБС и формирует XLS-файл", $tags="Внутренний контур банка")
+    Container(fileGateway, "Шлюз передачи файлов", "SFTP", "Принимает файлы от адаптера и доставляет партнёру; ведёт журнал и повторяет отправки", $tags="DMZ банка")
 }
-Container_Boundary(callCenter, "Система кол-центра"){
-    ' Сервисы
-    Container(callCenterService, "СallCenter Service", "", "Реализует внутреннюю логику")
-    ContainerDb(callCenterDb, "СallCenter Service Database", "", "Хранит данные")
-    ' Связи
-    callCenterService ..> callCenterDb: "Читает/записывает данные"
+Boundary(system, "Контур банка"){
+    Container_Boundary(ABS, "АБС"){
+        ' Сервисы
+        Container(absService, "Service ABS", "", "Реализует внутреннюю логику")
+        ContainerDb(absDb, "База данных АБС", "Oracle Database / PL-SQL", "Хранит данные и выполняет основную бизнес-логику в процедурах PL/SQL")
+        ' Связи
+        absService ..> absDb: "Вызывает процедуры и читает/записывает данные"
+    }
+    Container_Boundary(callCenter, "Система кол-центра"){
+        ' Сервисы
+        Container(callCenterService, "СallCenter Service", "", "Реализует внутреннюю логику")
+        ContainerDb(callCenterDb, "СallCenter Service Database", "", "Хранит данные")
+        ' Связи
+        callCenterService ..> callCenterDb: "Читает/записывает данные"
+    }
+    exportAdapter ..> absService: "Запрос актуальных ставок"
 }
-Container_Boundary(partnerCallCenter, "Система партнерского кол-центра"){
-    ' Сервисы
-    Container(partnerCallCenterService, "PartnerCallCenter Service", "", "Реализует внутреннюю логику")
-    ContainerDb(partnerCallCenterDb, "PartnerCallCenter Service Database", "", "Хранит данные")
-    ' Связи
-    partnerCallCenterService ..> partnerCallCenterDb: "Читает/записывает данные"
+Boundary(partnerNetwork, "Контур партнёра") {
+    Container(partnerSftp, "SFTP-сервер партнёра", "SFTP", "Хранит файлы актуальных ставок")
+
+    Container_Boundary(partnerCallCenter, "Система партнерского кол-центра"){
+        ' Сервисы
+        Container(partnerCallCenterService, "PartnerCallCenter Service", "", "Реализует внутреннюю логику")
+        ContainerDb(partnerCallCenterDb, "PartnerCallCenter Service Database", "", "Хранит данные")
+        ' Связи
+        partnerCallCenterService ..> partnerCallCenterDb: "Читает/записывает данные"
+    }
+
+    partnerCallCenterService .left.> partnerSftp: "Получает XLS-файлы"
 }
+' exportAdapter -[hidden]right- fileGateway
+' partnerSftp -[hidden]left- fileGateway
 ' Взаимодействия
 user ..> operator: "Обращается"
 user ..> partnerOperator: "Обращается"
@@ -37,5 +52,7 @@ callCenterService ..> absService: "Передает информацию по о
 partnerOperator ..> partnerCallCenterService: "Заводит обращения, просматривает ставки"
 partnerCallCenterService ..> absService: "Передает информацию по обращениям"
 
-absService .up.> partnerCallCenterService: "Передает XLS-файлы актуальных ставок раз в час по SFTP"
+exportAdapter .right.> fileGateway: "Передает XLS-файлы"
+fileGateway ..> partnerSftp: "Доставляет XLS-файлы"
+' absService .up.> partnerCallCenterService: "Передает XLS-файлы актуальных ставок раз в час по SFTP"
 @enduml
